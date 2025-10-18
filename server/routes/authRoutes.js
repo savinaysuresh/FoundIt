@@ -1,8 +1,16 @@
-// src/routes/authRoutes.js
 import express from "express";
+import { register, login, getMe } from "../controllers/authController.js";
+import auth from "../middleware/auth.js";
+
 const router = express.Router();
 
-// temporary placeholder handlers - you'll replace these with real controllers
-router.get("/ping", (req, res) => res.json({ ok: true, route: "auth" }));
+// Register new user
+router.post("/register", register);
+
+// Login
+router.post("/login", login);
+
+// Get logged-in user profile
+router.get("/me", auth, getMe);
 
 export default router;
