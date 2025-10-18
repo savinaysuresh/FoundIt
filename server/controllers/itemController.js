@@ -1,4 +1,4 @@
-import cloudinaryImport from "cloudinary";
+import cloudinaryImport from "../config/cloudinary.js";
 import fs from "fs";
 import Item from "../models/Item.js";
 import Match from "../models/Match.js";
