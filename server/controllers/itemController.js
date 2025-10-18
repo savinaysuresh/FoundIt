@@ -280,3 +280,8 @@ export const getMatchesForItem = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const rerunMatchForItem = async (req, res) => {
+  return res.status(501).json({ message: "rerunMatchForItem not implemented yet" });
+};
+

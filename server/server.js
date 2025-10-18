@@ -16,7 +16,7 @@ import matchRoutes from "./routes/matchRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
 // Periodic job (for rechecking unmatched items)
-import "./jobs/periodicMatcher.js";
+//import "./jobs/periodicMatcher.js";
 
 // ------------------------------------------------------
 // Load environment variables
