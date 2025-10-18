@@ -1,26 +1,101 @@
-import React from "react";
+// src/pages/ReportLost.jsx
+import React, { useState } from "react";
+import axios from "axios";
 import Header from "../components/Header";
 
-const ReportLost = () => (
-  <>
-    <Header />
-    <div className="container">
-      <h2>Report Lost Item</h2>
-      <input type="text" placeholder="Title" name="title" />
-      <textarea placeholder="Description" name="description"></textarea>
-      <select name="category">
-        <option>Electronics</option>
-        <option>Clothing</option>
-        <option>Documents</option>
-        <option>Accessories</option>
-        <option>Other</option>
-      </select>
-      <input type="text" placeholder="Last Seen Location" name="location" />
-      <input type="date" name="dateEvent" />
-      <input type="file" name="imageUrl" />
-      <button>Submit Lost Report</button>
-    </div>
-  </>
-);
+const ReportLost = () => {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    category: "Electronics",
+    location: "",
+    dateEvent: "",
+  });
+  const [image, setImage] = useState(null);
+  const [status, setStatus] = useState("");
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e) => {
+    setImage(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const data = new FormData();
+      for (const key in formData) data.append(key, formData[key]);
+      if (image) data.append("image", image);
+
+      const res = await axios.post("http://localhost:5000/api/items", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setStatus("✅ Lost item reported successfully!");
+      console.log("Response:", res.data);
+    } catch (err) {
+      console.error(err);
+      setStatus("❌ Failed to submit. Check console for details.");
+    }
+  };
+
+  return (
+    <>
+      <Header />
+      <div className="container">
+        <h2>Report Lost Item</h2>
+        <form onSubmit={handleSubmit} className="report-form">
+          <input
+            type="text"
+            placeholder="Title"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+          />
+          <textarea
+            placeholder="Description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+          ></textarea>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+          >
+            <option>Electronics</option>
+            <option>Clothing</option>
+            <option>Documents</option>
+            <option>Accessories</option>
+            <option>Other</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Last Seen Location"
+            name="location"
+            value={formData.location}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="date"
+            name="dateEvent"
+            value={formData.dateEvent}
+            onChange={handleChange}
+            required
+          />
+          <input type="file" name="image" onChange={handleFileChange} />
+          <button type="submit">Submit Lost Report</button>
+        </form>
+        {status && <p>{status}</p>}
+      </div>
+    </>
+  );
+};
 
 export default ReportLost;

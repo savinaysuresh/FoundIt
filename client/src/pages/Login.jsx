@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Header from "../components/Header";
 import axios from "axios"; // Import axios
+import api from "../utils/api";
 
 const Login = () => {
   // --- State to hold form data ---
@@ -28,8 +29,9 @@ const Login = () => {
       // We use "/api/auth/login" because of the proxy in vite.config.js
       // Vite will see "/api" and forward this request to:
       // http://localhost:5000/api/auth/login
-      const response = await axios.post("/api/auth/login", formData);
-
+      const response = await api.post("/auth/login", formData);
+      localStorage.setItem("token", response.data.token);
+      
       console.log("Login successful:", response.data);
       // TODO: Handle successful login
       // e.g., save token, redirect user
