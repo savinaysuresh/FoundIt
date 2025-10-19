@@ -22,8 +22,12 @@ const Navbar = () => {
 
       {user ? (
         <>
-          <span style={{ marginLeft: "1rem" }}>Welcome, {user.name}</span>
-          <button onClick={handleLogout} style={{ marginLeft: "0.5rem" }}>Logout</button>
+          <span style={{ marginLeft: "1rem" }}>
+            Welcome, {user.name} ({user.email})
+          </span>
+          <button onClick={handleLogout} style={{ marginLeft: "0.5rem" }}>
+            Logout
+          </button>
         </>
       ) : (
         <>
