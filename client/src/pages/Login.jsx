@@ -3,6 +3,7 @@ import Header from "../components/Header";
 import axios from "axios"; // Import axios
 import api from "../utils/api";
 
+
 const Login = () => {
   // --- State to hold form data ---
   const [formData, setFormData] = useState({
@@ -20,30 +21,23 @@ const Login = () => {
   };
 
   // --- Handle form submission ---
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    setError(null); // Clear previous errors
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError(null);
 
-    try {
-      // --- THIS IS THE API CALL ---
-      // We use "/api/auth/login" because of the proxy in vite.config.js
-      // Vite will see "/api" and forward this request to:
-      // http://localhost:5000/api/auth/login
-      const response = await api.post("/auth/login", formData);
-      localStorage.setItem("token", response.data.token);
-      
-      console.log("Login successful:", response.data);
-      // TODO: Handle successful login
-      // e.g., save token, redirect user
-      // localStorage.setItem('token', response.data.token);
-      // window.location.href = '/'; // Redirect to home
+  try {
+    const response = await api.post("/auth/login", formData);
+    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("user", JSON.stringify(response.data.user)); // Save user
+    console.log("Login successful:", response.data);
+    window.location.href = "/"; // Redirect to home
+  } catch (err) {
+    console.error("Login failed:", err);
+    setError(err.response?.data?.message || "An error occurred during login.");
+  }
+};
 
-    } catch (err) {
-      console.error("Login failed:", err);
-      // Set error message from server response if it exists
-      setError(err.response?.data?.message || "An error occurred during login.");
-    }
-  };
 
   return (
     <>

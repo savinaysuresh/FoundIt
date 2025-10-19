@@ -77,10 +77,13 @@ export const login = async (req, res) => {
     if (!matched) return res.status(401).json({ message: "Invalid credentials" });
 
     // domain check (defensive)
-    const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || "").replace(/^@/, "");
-    if (!user.email.endsWith(`@${allowedDomain}`)) {
-      return res.status(403).json({ message: `Only ${allowedDomain} emails are allowed.` });
-    }
+
+    const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || "").replace(/^@/, "").toLowerCase();
+
+// Allow login for any subdomain like xyz.nitw.ac.in
+if (!user.email.toLowerCase().endsWith(allowedDomain) && !user.email.toLowerCase().endsWith(`.${allowedDomain}`)) {
+  return res.status(403).json({ message: `Only ${allowedDomain} and its subdomains are allowed.` });
+}
 
     const token = createToken(user);
     res.json({
