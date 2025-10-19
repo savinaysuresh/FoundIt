@@ -21,7 +21,12 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password required" });
+      if(!name)
+        return res.status(400).json({ message: "Valid Name required" });
+      if(!email)
+        return res.status(400).json({ message: "Valid email required" });
+      if(!password)
+        return res.status(400).json({ message: "Valid password required" });
     }
 
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || "").replace(/^@/, "");
