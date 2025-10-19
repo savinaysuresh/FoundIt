@@ -5,8 +5,6 @@ import Match from "../models/Match.js";
 import Notification from "../models/Notification.js";
 import matcherService from "../services/matcherService.js";
 
-
-
 const cloudinary = cloudinaryImport.v2;
 
 /**
@@ -28,8 +26,6 @@ const uploadImage = async (req) => {
  * Expects fields: title, description, category, location, status (lost/found), dateEvent (optional)
  * Accepts image via multer (req.file) OR req.body.imageBase64
  */
-
-
 export const createItem = async (req, res) => {
   try {
     const { title, description, category, location, status, dateEvent } = req.body;
@@ -283,5 +279,9 @@ export const getMatchesForItem = async (req, res) => {
     console.error("getMatchesForItem error:", err);
     res.status(500).json({ message: "Server error" });
   }
+};
+
+export const rerunMatchForItem = async (req, res) => {
+  return res.status(501).json({ message: "rerunMatchForItem not implemented yet" });
 };
 
