@@ -29,10 +29,13 @@ export const register = async (req, res) => {
         return res.status(400).json({ message: "Valid password required" });
     }
 
-    const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || "").replace(/^@/, "");
-    if (!email.toLowerCase().endsWith(`@${allowedDomain}`)) {
-      return res.status(400).json({ message: `Only ${allowedDomain} emails are allowed.` });
-    }
+    const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || "").replace(/^@/, "").toLowerCase();
+
+// Allow subdomains like student.nitw.ac.in, cs.nitw.ac.in, etc.
+if (!email.toLowerCase().endsWith(allowedDomain) && !email.toLowerCase().endsWith(`.${allowedDomain}`)) {
+  return res.status(400).json({ message: `Only ${allowedDomain} and its subdomains are allowed.` });
+}
+
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) return res.status(400).json({ message: "User already exists" });

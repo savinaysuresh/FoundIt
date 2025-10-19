@@ -6,7 +6,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    passwordHash: "",
+    password: "",
     phone: "",
     role: "user",
   });
@@ -35,7 +35,7 @@ const Register = () => {
         <form onSubmit={handleSubmit}>
           <input name="name" placeholder="Full Name" onChange={handleChange} />
           <input name="email" type="email" placeholder="Email" onChange={handleChange} />
-          <input name="passwordHash" type="password" placeholder="Password" onChange={handleChange} />
+          <input name="password" type="password" placeholder="Password" onChange={handleChange} />
           <input name="phone" placeholder="Phone" onChange={handleChange} />
           <select name="role" onChange={handleChange}>
             <option value="user">User</option>
