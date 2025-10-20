@@ -5,20 +5,39 @@ import Header from "../components/Header";
 const MyClaims = () => {
   const [claims, setClaims] = useState([]);
 
+  // Fetch claims from backend
+  const fetchClaims = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/claims/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setClaims(res.data);
+    } catch (err) {
+      console.error("Error fetching claims:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchClaims = async () => {
-      try {
-        const token = localStorage.getItem("token"); // JWT token
-        const res = await axios.get("/api/claims/my", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setClaims(res.data);
-      } catch (err) {
-        console.error("Error fetching claims:", err);
-      }
-    };
     fetchClaims();
   }, []);
+
+  const token = localStorage.getItem("token");
+
+  // Cancel claim (set status to 'rejected')
+  const handleCancel = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this claim?")) return;
+    try {
+      await axios.put(
+        `/api/claims/${id}/status`,
+        { status: "rejected" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchClaims();
+    } catch (err) {
+      console.error("Error cancelling claim:", err);
+    }
+  };
 
   return (
     <>
@@ -42,11 +61,13 @@ const MyClaims = () => {
                       ? JSON.stringify(c[key])
                       : Array.isArray(c[key])
                       ? c[key].join(", ")
-                      : c[key].toString()}
+                      : c[key]?.toString()}
                   </td>
                 ))}
                 <td>
-                  <button>Cancel</button>
+                  {c.status !== "rejected" && (
+                    <button onClick={() => handleCancel(c._id)}>Cancel</button>
+                  )}
                 </td>
               </tr>
             ))}
