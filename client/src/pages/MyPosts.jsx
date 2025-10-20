@@ -2,22 +2,20 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-// 1. Import our new, clean API functions
 import { getMyPosts, deleteItem, resolveItem, updateItem } from "../utils/api";
 
 const MyPosts = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // For the edit button
+  const navigate = useNavigate();
 
   // Fetch posts from backend
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      // 2. Use the new API function
       const res = await getMyPosts();
-      setPosts(res.data); // The new route just returns an array
+      setPosts(res.data);
     } catch (err) {
       console.error("Error fetching posts:", err);
       setError("Failed to fetch posts. Please try again.");
@@ -34,7 +32,6 @@ const MyPosts = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
-      // 3. Use the new API function
       await deleteItem(id);
       fetchPosts(); // Refresh the list
     } catch (err) {
@@ -47,7 +44,6 @@ const MyPosts = () => {
   const handleResolve = async (id) => {
     if (!window.confirm("Mark this post as resolved?")) return;
     try {
-      // 4. Use the new API function
       await resolveItem(id);
       fetchPosts(); // Refresh the list
     } catch (err) {
@@ -59,13 +55,12 @@ const MyPosts = () => {
   // Edit post
   const handleEdit = async (post) => {
     const newTitle = prompt("Enter new title:", post.title);
-    if (newTitle === null || newTitle.trim() === "") return; // User cancelled or entered empty
+    if (newTitle === null || newTitle.trim() === "") return;
 
     const newDescription = prompt("Enter new description:", post.description);
-    if (newDescription === null) return; // User cancelled
+    if (newDescription === null) return;
 
     try {
-      // 5. Use the new API function
       await updateItem(post._id, {
         title: newTitle,
         description: newDescription,
@@ -86,13 +81,14 @@ const MyPosts = () => {
       <div className="container mx-auto p-4 sm:p-8">
         <h2 className="text-3xl font-bold mb-6">My Posts</h2>
         
-        {/* 6. Clean, responsive table */}
         <div className="overflow-x-auto shadow-md rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                {/* --- 1. "DESCRIPTION" COLUMN ADDED --- */}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -106,7 +102,7 @@ const MyPosts = () => {
               {posts.map((p) => (
                 <tr key={p._id} className={p.isResolved ? 'bg-gray-100 opacity-60' : ''}>
                   
-                  {/* Your requested columns: */}
+                  {/* Image Column */}
                   <td className="px-4 py-4">
                     <img
                       src={p.imageUrl || 'https://via.placeholder.com/100'}
@@ -114,7 +110,15 @@ const MyPosts = () => {
                       className="w-16 h-16 object-cover rounded"
                     />
                   </td>
+                  
                   <td className="px-4 py-4 whitespace-nowrap font-medium text-gray-900">{p.title}</td>
+
+                  {/* --- 2. "DESCRIPTION" DATA ADDED --- */}
+                  {/* 'truncate' prevents long text from breaking the table */}
+                  <td className="px-4 py-4 max-w-xs text-sm text-gray-500 truncate" title={p.description}>
+                    {p.description}
+                  </td>
+                  
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{p.category}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{p.location}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
