@@ -281,6 +281,45 @@ export const getMatchesForItem = async (req, res) => {
   }
 };
 
+/**
+ * Search items (used by search bar)
+ * Matches by title, description, category, or location.
+ * Example: /api/items/search?query=phone
+ */
+export const searchItems = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "No search query provided" });
+    }
+
+    // Case-insensitive fuzzy search
+    const regex = new RegExp(query, "i");
+
+    const items = await Item.find({
+      $or: [
+        { title: regex },
+        { description: regex },
+        { category: regex },
+        { location: regex },
+      ],
+      isResolved: false, // optional: show only unresolved
+    })
+      .sort({ datePosted: -1 })
+      .limit(50)
+      .lean();
+
+    if (!items.length) {
+      return res.status(200).json({ message: "No items found", items: [] });
+    }
+
+    res.status(200).json({ items });
+  } catch (error) {
+    console.error("Error searching items:", error);
+    res.status(500).json({ message: "Server error during search" });
+  }
+};
+
 export const rerunMatchForItem = async (req, res) => {
   return res.status(501).json({ message: "rerunMatchForItem not implemented yet" });
 };

@@ -10,13 +10,10 @@ import errorHandler from "./middleware/errorHandler.js";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
-import itemRoutes from "./routes/itemRoutes.js";
 import claimRoutes from "./routes/claimRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
-
-// Periodic job (for rechecking unmatched items)
-//import "./jobs/periodicMatcher.js";
+import itemRoutes from "./routes/itemRoutes.js";  // ✅ all item endpoints (fuzzy search + CRUD)
 
 // ------------------------------------------------------
 // Load environment variables
@@ -63,7 +60,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/items", itemRoutes);
+app.use("/api/items", itemRoutes);           // ✅ fuzzy search + CRUD
 app.use("/api/claims", claimRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -95,7 +92,7 @@ let onlineUsers = new Map();
 io.on("connection", (socket) => {
   console.log("🔌 User connected:", socket.id);
 
-  // Register a user (frontend should emit 'register-user' with userId)
+  // Register a user
   socket.on("register-user", (userId) => {
     onlineUsers.set(userId, socket.id);
     console.log(`✅ User registered: ${userId}`);
@@ -110,7 +107,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Broadcast a message to all connected users (for admin alerts, etc.)
+  // Broadcast message to all users
   socket.on("broadcast", (message) => {
     io.emit("notification", message);
     console.log(`📢 Broadcast message: ${message}`);

@@ -10,13 +10,16 @@ import MyPosts from "./pages/MyPosts";
 import MyClaims from "./pages/MyClaims";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ItemsMatched from "./pages/ItemsMatched"; // ✅ import added
 
 const App = () => (
   <Router>
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/items-matched" element={<ItemsMatched />} /> {/* ✅ Added */}
 
       {/* Protected routes */}
       <Route
@@ -36,7 +39,7 @@ const App = () => (
         }
       />
       <Route
-        path="/item/:id"
+        path="/itemDetails/:id" // ✅ Matches navigate() from ItemsMatched.jsx
         element={
           <ProtectedRoute>
             <ItemDetails />
@@ -67,6 +70,7 @@ const App = () => (
           </ProtectedRoute>
         }
       />
+      
     </Routes>
   </Router>
 );

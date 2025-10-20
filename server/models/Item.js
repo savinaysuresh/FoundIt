@@ -17,4 +17,5 @@ const itemSchema = new mongoose.Schema({
 
 itemSchema.index({ title: "text", description: "text", category: 1, location: 1 });
 
-export default mongoose.model("Item", itemSchema);
+const Item = mongoose.models.Item || mongoose.model("Item", itemSchema);
+export default Item
