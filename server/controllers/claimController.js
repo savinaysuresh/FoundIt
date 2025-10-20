@@ -8,11 +8,16 @@ import Notification from "../models/Notification.js";
  */
 export const createClaim = async (req, res) => {
   try {
-    const { itemId, message } = req.body;
+    const { message } = req.body;
+    const { itemId } = req.params;
     if (!itemId) return res.status(400).json({ message: "itemId required" });
 
     const item = await Item.findById(itemId);
     if (!item) return res.status(404).json({ message: "Item not found" });
+
+    if (item.postedBy.toString() === req.user.id.toString()) {
+      return res.status(400).json({ message: "You cannot claim your own item." });
+    }
 
     const claim = await Claim.create({
       itemId,

@@ -1,11 +1,10 @@
+// server/routes/itemRoutes.js
+
 import express from "express";
 import auth from "../middleware/auth.js";
 import admin from "../middleware/admin.js";
 import upload from "../middleware/uploadMiddleware.js";
-import Item from "../models/Item.js"; // ✅ make sure this import exists
-
-// server/routes/itemRoutes.js
-// ... (other imports)
+import Item from "../models/Item.js"; // This is needed for the public GET / route
 
 import {
   createItem,
@@ -17,33 +16,19 @@ import {
   getMatchesForItem,
   rerunMatchForItem,
   searchItems,
-  getMyPosts, // 1. Import your new function
+  getMyPosts,
 } from "../controllers/itemController.js";
 
 const router = express.Router();
 
-// ... (your existing PUBLIC ROUTES)
-
-// ------------------------------------------------------
-// 🔐 PROTECTED ROUTES (require authentication)
-// ------------------------------------------------------
-
-// 2. Add your new route here
-// Get all posts for the logged-in user
-router.get("/my-posts", auth, getMyPosts);
-
-// Create item (with image upload)
-router.post("/", auth, upload.single("image"), createItem);
-
-// ... (rest of your protected routes)
-
-// ------------------------------------------------------
+// ======================================================
 // 🟢 PUBLIC ROUTES (accessible without login)
-// ------------------------------------------------------
-// 🔍 Search (no auth required if you want public search)
+// ======================================================
+
+// Handles the search bar on the homepage
 router.get("/search", searchItems);
 
-// Get all items (used for fuzzy search and public browsing)
+// Gets all items for public browsing (does not populate user details)
 router.get("/", async (req, res) => {
   try {
     const items = await Item.find();
@@ -54,45 +39,44 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get one item by ID (used in ItemDetails page)
-router.get("/:id", async (req, res) => {
-  try {
-    const item = await Item.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
-    res.json(item);
-  } catch (error) {
-    console.error("Error fetching item by ID:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
-// ------------------------------------------------------
-// 🔐 PROTECTED ROUTES (require authentication)
-// ------------------------------------------------------
+// ======================================================
+// 🔐 PROTECTED ROUTES (require authentication via 'auth' middleware)
+// ======================================================
 
-// Create item (with image upload)
+// Gets all posts for the currently logged-in user
+router.get("/my-posts", auth, getMyPosts);
+
+// --- THIS IS THE FIX ---
+// This is the single, correct route to get an item's details.
+// It's protected and uses the `getItemById` controller, which sends the
+// data in the correct format (`{ item, matches }`) that your frontend needs.
+router.get("/:id", auth, getItemById);
+// -----------------------
+
+// Creates a new item (with image upload)
 router.post("/", auth, upload.single("image"), createItem);
 
-// Update item
+// Updates an item
 router.put("/:id", auth, upload.single("image"), updateItem);
 
-// Delete item
+// Deletes an item
 router.delete("/:id", auth, deleteItem);
 
-// Mark item as resolved (owner or admin)
+// Marks an item as resolved
 router.post("/:id/resolve", auth, resolveItem);
 
-// Get matches for a specific item
+// Gets all matches for a specific item
 router.get("/:id/matches", auth, getMatchesForItem);
 
-// Admin or owner: rerun matcher for an item
+// Reruns the matcher for an item
 router.post("/:id/rerun-matcher", auth, rerunMatchForItem);
 
-// ------------------------------------------------------
-// ✅ Optional: admin-only route (example)
-// ------------------------------------------------------
+
+// ======================================================
+// 👮 ADMIN-ONLY ROUTE (requires 'admin' role)
+// ======================================================
 router.get("/admin/all", auth, admin, getItems);
+
 
 export default router;

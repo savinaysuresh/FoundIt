@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 // Create claim
-router.post("/", auth, createClaim);
+router.post("/item/:itemId", auth, createClaim);
 
 // Get current user's claims
 router.get("/my", auth, getMyClaims);

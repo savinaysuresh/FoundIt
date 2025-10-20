@@ -38,14 +38,19 @@ const App = () => (
           </ProtectedRoute>
         }
       />
+     
+      {/* --- THIS IS THE FIX --- */}
+      {/* The path is now "/item/:id" to match the link in ItemCard.jsx */}
       <Route
-        path="/itemDetails/:id" // ✅ Matches navigate() from ItemsMatched.jsx
+        path="/item/:id" 
         element={
           <ProtectedRoute>
             <ItemDetails />
           </ProtectedRoute>
         }
       />
+      {/* ------------------------- */}
+
       <Route
         path="/my-posts"
         element={
