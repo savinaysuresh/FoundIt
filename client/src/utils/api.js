@@ -1,17 +1,16 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "/api",
-  withCredentials: true,
+// Base API config — change port if needed
+const API = axios.create({
+  baseURL: "http://localhost:5000/api", // your backend URL
+  withCredentials: true, // if you use cookies / JWT
 });
 
-// Automatically attach token if exists
-api.interceptors.request.use((config) => {
+// For protected routes, attach token (if you have JWT auth)
+API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  if (token) req.headers.Authorization = `Bearer ${token}`;
+  return req;
 });
 
-export default api;
+export default API;
