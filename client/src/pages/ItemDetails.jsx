@@ -2,93 +2,147 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "../components/Header";
-// Import the API functions we created
-import { getItemById, createClaim, getClaimsForItem } from "../utils/api";
-// You might need auth context to see if the user is the owner
+import { getItemById, createClaim, getClaimsForItem, updateClaimStatus } from "../utils/api"; 
 import { useAuth } from "../context/AuthContext";
 
 const ItemDetails = () => {
+  // Page loading and item data
+  const [loading, setLoading] = useState(true);
   const [item, setItem] = useState(null);
   const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // --- NEW: State for claims ---
+  // Claims data (for owner view)
   const [claims, setClaims] = useState([]);
   const [loadingClaims, setLoadingClaims] = useState(false);
 
-  // States for the claim form
+  // New claim form data (for non-owner view)
   const [claimMessage, setClaimMessage] = useState('');
   const [claimError, setClaimError] = useState(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
 
-  const { id: itemId } = useParams(); // Get the item ID from the URL
+  const { id: itemId } = useParams();
+  const { auth, loading: authLoading } = useAuth(); // Get auth state and its loading status
   
-  const { auth } = useAuth(); // Get auth state
-  const isOwner = auth?.user?._id === item?.postedBy?._id;
+  // State to track if the current user is the owner
+  const [isOwner, setIsOwner] = useState(false); // Initialize as false
 
-  // 1. Fetch item data on load
-  useEffect(() => {
-    const fetchItemAndClaims = async () => {
-      try {
-        setLoading(true);
-        // This calls your backend: GET /api/items/:id
-        const data = await getItemById(itemId); 
-        setItem(data.item);
-        setMatches(data.matches || []); // Get matches from backend
-        // --- 3. Check for ownership and fetch claims ---
-        // We need to check ownership against the item data we just fetched
-        const ownerCheck = auth?.user?._id === data.item?.postedBy?._id;
-        if (ownerCheck) {
-          setLoadingClaims(true);
-          const claimsData = await getClaimsForItem(itemId);
-          setClaims(claimsData);
-          setLoadingClaims(false);
+  // Function to fetch all necessary data
+  const fetchItemAndClaims = async () => {
+    // Prevent fetching if auth isn't loaded or no user/item ID
+    if (!itemId || !auth?.user?._id) {
+        setLoading(false); // Stop loading if we can't fetch
+        // Potentially set an error or just show item details without owner checks
+        // For now, let's try fetching the item anyway if not logged in
+        try {
+            setLoading(true);
+             const data = await getItemById(itemId); 
+             setItem(data.item);
+             setMatches(data.matches || []);
+             setIsOwner(false); // Definitely not the owner if not logged in
+        } catch(err) {
+             setError(err.message || 'Failed to fetch item');
+        } finally {
+             setLoading(false);
         }
-      } catch (err) {
-        setError(err.message || 'Failed to fetch item');
-      } finally {
-        setLoading(false);
+        return; 
+    }
+
+    try {
+      setLoading(true);
+      setError(null); // Clear previous errors
+      const data = await getItemById(itemId); 
+      
+      if (!data || !data.item) {
+          throw new Error("Item data not received correctly.");
       }
-    };
-    if (!auth.loading && itemId) {
+
+      setItem(data.item);
+      setMatches(data.matches || []);
+      
+      // *** Safely check ownership AFTER item data is confirmed ***
+      const ownerCheck = auth.user._id === data.item.postedBy?._id; 
+      setIsOwner(ownerCheck);
+
+      // If they are the owner, fetch the claims
+      if (ownerCheck) {
+        setLoadingClaims(true);
+        const claimsData = await getClaimsForItem(itemId);
+        setClaims(claimsData);
+        setLoadingClaims(false);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err); // Log the actual error
+      setError(err.message || 'Failed to fetch item or claims');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Main data fetching effect - runs when component mounts or dependencies change
+  useEffect(() => {
+    // Only run if AUTH has finished loading and we have an itemId
+    if (!authLoading && itemId) {
       fetchItemAndClaims();
     }
-  }, [itemId, auth.loading, auth.user]);
+     // Cleanup function (optional but good practice)
+    return () => {
+      // Cancel any pending fetches if component unmounts quickly
+    };
+  }, [itemId, authLoading, auth?.user?._id]); // Depend on user ID specifically if possible
 
-  // 2. Handle the claim submission
+  // Handler for submitting a new claim
   const handleClaimSubmit = async (e) => {
     e.preventDefault();
+    // ... (rest of the function is likely correct) ...
     if (!claimMessage.trim()) {
       setClaimError("Please provide a message.");
       return;
     }
-    
     setClaimError(null);
     setClaimSuccess(false);
-
     try {
-      // This calls your backend: POST /api/claims/item/:itemId
       await createClaim({ itemId, message: claimMessage });
       setClaimSuccess(true);
-      setClaimMessage(''); // Clear message box
+      setClaimMessage('');
     } catch (err) {
       setClaimError(err.message || 'Failed to submit claim. Are you logged in?');
     }
   };
+  
+  // Handler for Accept/Decline buttons
+  const handleClaimResponse = async (claimId, response) => {
+    // ... (this function is likely correct) ...
+     if (!window.confirm(`Are you sure you want to ${response} this claim?`)) {
+      return;
+    }
+    try {
+      await updateClaimStatus(claimId, response);
+      fetchItemAndClaims(); // Refresh all page data
+    } catch (error) {
+      alert(`Failed to ${response} claim: ${error.message}`);
+    }
+  };
 
+  // --- RENDER LOGIC ---
+
+  // Initial loading state (before item is fetched)
   if (loading) return (
     <>
       <Header />
-      <div className="text-center p-8">Loading...</div>
+      <div className="text-center p-8">Loading item details...</div>
     </>
   );
+
+  // Error state
   if (error) return (
     <>
       <Header />
       <div className="text-center p-8 text-red-500">{error}</div>
     </>
   );
+
+  // Item not found state (after loading finishes but item is null)
   if (!item) return (
     <>
       <Header />
@@ -96,80 +150,101 @@ const ItemDetails = () => {
     </>
   );
 
+  // --- Main Render ---
   return (
     <>
       <Header />
       <div className="container mx-auto p-4 max-w-3xl">
-        {/* --- ITEM DETAILS (your existing code) --- */}
+        {/* --- ITEM DETAILS --- */}
         <img 
           src={item.imageUrl || 'https://via.placeholder.com/600x400'} 
           alt={item.title} 
           className="w-full h-96 object-cover rounded-lg mb-4" 
         />
-        {/* ... (all your existing item details code: title, location, desc, etc.) ... */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-4xl font-bold">{item.title}</h2>
+          <span className={`px-3 py-1 font-semibold rounded-full ${item.status === 'lost' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
+            {item.status.toUpperCase()}
+          </span>
+        </div>
+        
+        {item.isResolved && (
+          <div className="p-4 mb-4 text-lg text-center font-bold bg-green-200 text-green-800 rounded-lg">
+            This item has been resolved.
+          </div>
+        )}
+        
+        <p className="text-xl text-gray-700 mb-4">{item.location}</p>
+        <p><strong>Category:</strong> {item.category}</p>
         <p className="text-gray-800 my-6">{item.description}</p>
+        {/* Safely access postedBy name */}
         <p className="text-sm text-gray-500">
-          Posted by: {item.postedBy.name}
+          Posted by: {item.postedBy?.name || 'Unknown User'} 
         </p>
         <p className="text-sm text-gray-500">
-          {item.status === 'lost' ? 'Lost on:' : 'Found on:'} {new Date(item.dateEvent).toLocaleDateString()}
+          {item.status === 'lost' ? 'Lost on:' : 'Found on:'} {item.dateEvent ? new Date(item.dateEvent).toLocaleDateString() : 'N/A'}
         </p>
 
-        {/* --- 4. CONDITIONAL SECTIONS --- */}
-
-        {/* A) If YOU ARE the owner, show the "Manage Claims" section */}
+        {/* --- MANAGE CLAIMS SECTION (for owner) --- */}
         {isOwner && (
           <div className="mt-8 border-t pt-6">
             <h3 className="text-2xl font-semibold mb-4">Manage Claims</h3>
             {loadingClaims && <p>Loading claims...</p>}
-            {claims.length === 0 && !loadingClaims && (
+            {!loadingClaims && claims.length === 0 && (
               <p className="text-gray-600">No claims have been submitted for this item yet.</p>
             )}
             <div className="space-y-4">
               {claims.map((claim) => (
                 <div key={claim._id} className="border p-4 rounded-lg shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold">{claim.claimantId.name}</span>
-                    <span className="text-sm text-gray-500">({claim.claimantId.email})</span>
+                    {/* Safely access claimant name and email */}
+                    <span className="font-semibold">{claim.claimantId?.name || 'Unknown Claimant'}</span>
+                    <span className="text-sm text-gray-500">({claim.claimantId?.email || 'No email'})</span>
                   </div>
                   <p className="text-gray-700 mb-2">"{claim.message}"</p>
-                  <div className="flex justify-between items-center">
-                    <span className={`font-medium text-sm capitalize px-2 py-1 rounded ${
-                      claim.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
-                      claim.status === 'verified' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
-                    }`}>
-                      {claim.status}
-                    </span>
+                  <div className="flex justify-between items-center mt-4">
+                    {claim.status !== 'pending' && (
+                      <span className={`font-medium text-sm capitalize px-2 py-1 rounded ${
+                        claim.status === 'verified' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                      }`}>
+                        {claim.status}
+                      </span>
+                    )}
+                    {!item.isResolved && claim.status === 'pending' && (
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleClaimResponse(claim._id, 'verified')}
+                          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          onClick={() => handleClaimResponse(claim._id, 'rejected')}
+                          className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
                     <span className="text-xs text-gray-400">
-                      {new Date(claim.dateClaimed).toLocaleString()}
+                      {claim.dateClaimed ? new Date(claim.dateClaimed).toLocaleString() : 'N/A'}
                     </span>
                   </div>
-                  {/* TODO: Add buttons here to Verify or Reject the claim */}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* B) If you are NOT the owner, show the "Make a Claim" form */}
-        {!isOwner && auth.user && (
+        {/* --- "MAKE A CLAIM" FORM (for non-owner) --- */}
+        {!isOwner && auth?.user && !item.isResolved && ( // Check auth.user exists
           <div className="mt-8 border-t pt-6">
             <h3 className="text-2xl font-semibold mb-4">Make a Claim</h3>
-            <p className="mb-4">
-              {item.status === 'found' 
-                ? "Do you think this is your item? Send a message to the poster to start the claim process."
-                : "Do you think you found this person's item? Let them know!"
-              }
-            </p>
             <form onSubmit={handleClaimSubmit}>
               <textarea
                 value={claimMessage}
                 onChange={(e) => setClaimMessage(e.target.value)}
-                placeholder={
-                  item.status === 'found'
-                  ? "Prove it's yours. (e.g., 'My wallet has a photo of a dog in it...')"
-                  : "Describe where you found it. (e.g., 'I found this in the cafeteria...')"
-                }
+                placeholder="Prove it's yours. (e.g., 'My wallet has a photo of a dog in it...')"
                 className="w-full p-2 border rounded mb-2"
                 rows="4"
                 required
