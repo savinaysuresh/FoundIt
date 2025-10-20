@@ -135,6 +135,28 @@ export const getItemById = async (req, res) => {
   }
 };
 
+// server/controllers/itemController.js
+// ... (keep all your existing imports and functions)
+
+// ... (after your getItemById function)
+
+/**
+ * Get all items posted by the currently logged-in user
+ */
+export const getMyPosts = async (req, res) => {
+  try {
+    const items = await Item.find({ postedBy: req.user.id })
+      .populate("postedBy", "name email") // <-- This gets the email
+      .sort({ datePosted: -1 });
+
+    res.json(items);
+  } catch (err) {
+    console.error("getMyPosts error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 /**
  * Update item (owner or admin)
  */

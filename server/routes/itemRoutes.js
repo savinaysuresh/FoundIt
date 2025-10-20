@@ -2,7 +2,10 @@ import express from "express";
 import auth from "../middleware/auth.js";
 import admin from "../middleware/admin.js";
 import upload from "../middleware/uploadMiddleware.js";
-import Item from "../models/item.js"; // ✅ make sure this import exists
+import Item from "../models/Item.js"; // ✅ make sure this import exists
+
+// server/routes/itemRoutes.js
+// ... (other imports)
 
 import {
   createItem,
@@ -13,10 +16,26 @@ import {
   resolveItem,
   getMatchesForItem,
   rerunMatchForItem,
-    searchItems,
+  searchItems,
+  getMyPosts, // 1. Import your new function
 } from "../controllers/itemController.js";
 
 const router = express.Router();
+
+// ... (your existing PUBLIC ROUTES)
+
+// ------------------------------------------------------
+// 🔐 PROTECTED ROUTES (require authentication)
+// ------------------------------------------------------
+
+// 2. Add your new route here
+// Get all posts for the logged-in user
+router.get("/my-posts", auth, getMyPosts);
+
+// Create item (with image upload)
+router.post("/", auth, upload.single("image"), createItem);
+
+// ... (rest of your protected routes)
 
 // ------------------------------------------------------
 // 🟢 PUBLIC ROUTES (accessible without login)
