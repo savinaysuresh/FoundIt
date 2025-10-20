@@ -3,9 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "../components/Header";
 // Import the API functions we created
-import { getItemById, createClaim } from "../utils/api";
+import { getItemById, createClaim, getClaimsForItem } from "../utils/api";
 // You might need auth context to see if the user is the owner
-// import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const ItemDetails = () => {
   const [item, setItem] = useState(null);
@@ -13,32 +13,48 @@ const ItemDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // --- NEW: State for claims ---
+  const [claims, setClaims] = useState([]);
+  const [loadingClaims, setLoadingClaims] = useState(false);
+
   // States for the claim form
   const [claimMessage, setClaimMessage] = useState('');
   const [claimError, setClaimError] = useState(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
 
   const { id: itemId } = useParams(); // Get the item ID from the URL
-  // const { auth } = useAuth(); // Get auth state
-  // const isOwner = auth?.user?._id === item?.postedBy?._id;
+  
+  const { auth } = useAuth(); // Get auth state
+  const isOwner = auth?.user?._id === item?.postedBy?._id;
 
   // 1. Fetch item data on load
   useEffect(() => {
-    const fetchItem = async () => {
+    const fetchItemAndClaims = async () => {
       try {
         setLoading(true);
         // This calls your backend: GET /api/items/:id
         const data = await getItemById(itemId); 
         setItem(data.item);
         setMatches(data.matches || []); // Get matches from backend
+        // --- 3. Check for ownership and fetch claims ---
+        // We need to check ownership against the item data we just fetched
+        const ownerCheck = auth?.user?._id === data.item?.postedBy?._id;
+        if (ownerCheck) {
+          setLoadingClaims(true);
+          const claimsData = await getClaimsForItem(itemId);
+          setClaims(claimsData);
+          setLoadingClaims(false);
+        }
       } catch (err) {
         setError(err.message || 'Failed to fetch item');
       } finally {
         setLoading(false);
       }
     };
-    fetchItem();
-  }, [itemId]);
+    if (!auth.loading && itemId) {
+      fetchItemAndClaims();
+    }
+  }, [itemId, auth.loading, auth.user]);
 
   // 2. Handle the claim submission
   const handleClaimSubmit = async (e) => {
@@ -84,19 +100,13 @@ const ItemDetails = () => {
     <>
       <Header />
       <div className="container mx-auto p-4 max-w-3xl">
+        {/* --- ITEM DETAILS (your existing code) --- */}
         <img 
           src={item.imageUrl || 'https://via.placeholder.com/600x400'} 
           alt={item.title} 
           className="w-full h-96 object-cover rounded-lg mb-4" 
         />
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-4xl font-bold">{item.title}</h2>
-          <span className={`px-3 py-1 font-semibold rounded-full ${item.status === 'lost' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
-            {item.status.toUpperCase()}
-          </span>
-        </div>
-        <p className="text-xl text-gray-700 mb-4">{item.location}</p>
-        <p><strong>Category:</strong> {item.category}</p>
+        {/* ... (all your existing item details code: title, location, desc, etc.) ... */}
         <p className="text-gray-800 my-6">{item.description}</p>
         <p className="text-sm text-gray-500">
           Posted by: {item.postedBy.name}
@@ -105,11 +115,44 @@ const ItemDetails = () => {
           {item.status === 'lost' ? 'Lost on:' : 'Found on:'} {new Date(item.dateEvent).toLocaleDateString()}
         </p>
 
-        {/* --- 3. CLAIM FORM --- */}
-        {/* We'll show this if the user is logged in and is NOT the owner */}
-        {/* You would uncomment the 'isOwner' logic if you have auth context */}
-        {/* {!isOwner && auth.user && ( */}
-        { (
+        {/* --- 4. CONDITIONAL SECTIONS --- */}
+
+        {/* A) If YOU ARE the owner, show the "Manage Claims" section */}
+        {isOwner && (
+          <div className="mt-8 border-t pt-6">
+            <h3 className="text-2xl font-semibold mb-4">Manage Claims</h3>
+            {loadingClaims && <p>Loading claims...</p>}
+            {claims.length === 0 && !loadingClaims && (
+              <p className="text-gray-600">No claims have been submitted for this item yet.</p>
+            )}
+            <div className="space-y-4">
+              {claims.map((claim) => (
+                <div key={claim._id} className="border p-4 rounded-lg shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold">{claim.claimantId.name}</span>
+                    <span className="text-sm text-gray-500">({claim.claimantId.email})</span>
+                  </div>
+                  <p className="text-gray-700 mb-2">"{claim.message}"</p>
+                  <div className="flex justify-between items-center">
+                    <span className={`font-medium text-sm capitalize px-2 py-1 rounded ${
+                      claim.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
+                      claim.status === 'verified' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                    }`}>
+                      {claim.status}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(claim.dateClaimed).toLocaleString()}
+                    </span>
+                  </div>
+                  {/* TODO: Add buttons here to Verify or Reject the claim */}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* B) If you are NOT the owner, show the "Make a Claim" form */}
+        {!isOwner && auth.user && (
           <div className="mt-8 border-t pt-6">
             <h3 className="text-2xl font-semibold mb-4">Make a Claim</h3>
             <p className="mb-4">

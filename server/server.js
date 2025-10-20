@@ -128,6 +128,8 @@ io.on("connection", (socket) => {
 // Make io accessible in routes/controllers
 app.set("io", io);
 
+app.set("onlineUsers", onlineUsers);
+
 // ------------------------------------------------------
 // Start Server
 // ------------------------------------------------------

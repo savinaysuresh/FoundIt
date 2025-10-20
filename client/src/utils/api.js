@@ -128,6 +128,43 @@ export const createClaim = async (claimData) => {
   }
 };
 
+export const getClaimsForItem = async (itemId) => {
+  try {
+    const { data } = await API.get(`/claims/for-item/${itemId}`);
+    return data; // This will be an array of claims
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+// --- (NEW) NOTIFICATION FUNCTIONS ---
+// These were missing, causing the error.
+
+/**
+ * Get all notifications for the logged-in user
+ */
+export const getMyNotifications = async () => {
+  try {
+    const { data } = await API.get('/notifications');
+    return data; // This should return { notifications, unreadCount }
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    throw error.response.data;
+  }
+};
+
+/**
+ * Mark all notifications as read
+ */
+export const markNotificationsRead = async () => {
+  try {
+    const { data } = await API.put('/notifications/read');
+    return data;
+  } catch (error) {
+    console.error('Error marking notifications read:', error);
+    throw error.response.data;
+  }
+};
 
 // Export the base instance as the default
 export default API;
