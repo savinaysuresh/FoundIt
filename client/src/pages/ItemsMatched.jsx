@@ -5,7 +5,8 @@ import Fuse from "fuse.js";
 const ItemsMatched = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const query = new URLSearchParams(location.search).get("query") || "";
+  const query = location.state?.query || "";
+
 
   const [allItems, setAllItems] = useState([]);
   const [matchedItems, setMatchedItems] = useState([]);
@@ -36,7 +37,7 @@ const ItemsMatched = () => {
 
   // Apply fuzzy search whenever query or items change
   useEffect(() => {
-    if (!query || allItems.length === 0) {
+    if (allItems.length === 0) {
       setMatchedItems([]);
       return;
     }
@@ -49,6 +50,12 @@ const ItemsMatched = () => {
     const results = fuse.search(query);
     setMatchedItems(results.map((r) => r.item));
   }, [query, allItems]);
+
+  useEffect(() => {
+  if (!query) {
+    navigate("/");
+  }
+}, [query, navigate]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;

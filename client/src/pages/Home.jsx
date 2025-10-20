@@ -9,7 +9,8 @@ const Home = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (query.trim() !== "") {
-      navigate(`/items_matched?query=${encodeURIComponent(query)}`);
+      // ✅ Pass query using React Router state instead of URL
+      navigate("/items-matched", { state: { query } });
     }
   };
 
