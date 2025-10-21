@@ -45,6 +45,21 @@ export const getItemById = async (id) => {
   }
 };
 
+export const getItems = async (params = {}) => {
+  try {
+    // Default to fetching only unresolved items, add a limit if desired
+    const defaultParams = { isResolved: 'false', limit: 500 };
+    const queryParams = new URLSearchParams({...defaultParams, ...params}).toString();
+    const { data } = await API.get(`/items?${queryParams}`);
+    // Ensure the backend route for GET /items returns data in { items: [...] } format
+    return data;
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    // Throw error so the component using this can handle it (e.g., show an error message)
+    throw error.response?.data || new Error("Failed to fetch items");
+  }
+};
+
 // --- MyPosts / Item Management Functions ---
 export const getMyPosts = () => API.get('/items/my-posts');
 export const deleteItem = (id) => API.delete(`/items/${id}`);
