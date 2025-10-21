@@ -145,5 +145,18 @@ export const markNotificationsRead = async () => {
   }
 };
 
+// client/src/utils/api.js
+// ... (all your other functions)
+
+// --- ADMIN FUNCTIONS ---
+export const getAdminStats = async () => {
+  try {
+    const { data } = await API.get('/admin/stats');
+    return data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
 // Export the base instance as the default
 export default API;

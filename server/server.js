@@ -14,7 +14,7 @@ import claimRoutes from "./routes/claimRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import itemRoutes from "./routes/itemRoutes.js";  // ✅ all item endpoints (fuzzy search + CRUD)
-
+import adminRoutes from './routes/adminRoutes.js'; // Import the new admin routes
 // ------------------------------------------------------
 // Load environment variables
 // ------------------------------------------------------
@@ -64,7 +64,7 @@ app.use("/api/items", itemRoutes);           // ✅ fuzzy search + CRUD
 app.use("/api/claims", claimRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/notifications", notificationRoutes);
-
+app.use('/api/admin', adminRoutes);
 // ------------------------------------------------------
 // Global Error Handler
 // ------------------------------------------------------
