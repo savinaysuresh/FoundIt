@@ -105,14 +105,10 @@ export const deleteMyClaim = async (claimId) => {
     throw error.response.data;
   }
 };
-
-// --- THIS FUNCTION WAS MISSING ---
 /**
  * Fetches the claims made BY the current user.
- * Corresponds to the GET /api/claims/my route.
  */
 export const getMyClaims = () => API.get('/claims/my');
-// ---------------------------------
 
 // --- NOTIFICATION FUNCTIONS ---
 export const getMyNotifications = async () => {

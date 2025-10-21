@@ -4,6 +4,7 @@ const matchSchema = new mongoose.Schema({
   lostItemId: { type: mongoose.Schema.Types.ObjectId, ref: "Item", required: true, index: true },
   foundItemId: { type: mongoose.Schema.Types.ObjectId, ref: "Item", required: true, index: true },
   score: { type: Number, required: true }, // 0-1
+  status: { type: String, enum: ['suggested', 'confirmed', 'rejected'], default: 'suggested', index: true }, // Added status
   createdAt: { type: Date, default: Date.now }
 });
 matchSchema.index({ lostItemId: 1, foundItemId: 1 }, { unique: true });

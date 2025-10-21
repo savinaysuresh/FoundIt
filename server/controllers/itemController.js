@@ -52,12 +52,9 @@ export const createItem = async (req, res) => {
       postedBy: req.user.id
     });
 
-    // Run matcher immediately (if service available)
-    try {
-      await matcherService.runForItem(item);
-    } catch (err) {
-      console.warn("Matcher error (non-fatal):", err);
-    }
+    const io = req.app.get("io");
+    const onlineUsers = req.app.get("onlineUsers");
+    matcherService.runForItem(item, io, onlineUsers).catch(err => console.error("Matcher service error (non-fatal):", err)); // Run async
 
     res.status(201).json(item);
   } catch (err) {
@@ -170,6 +167,11 @@ export const updateItem = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
+    // Check which fields are being updated
+    const relevantFieldsChanged = ['title', 'description', 'category', 'location', 'status'].some(
+        field => req.body[field] !== undefined && item[field] !== req.body[field]
+    );
+
     const updatable = ["title", "description", "category", "location", "status", "dateEvent", "isResolved"];
     updatable.forEach((k) => {
       if (req.body[k] !== undefined) item[k] = req.body[k];
@@ -203,10 +205,11 @@ export const updateItem = async (req, res) => {
     await item.save();
 
     // re-run matcher if relevant fields changed
-    try {
-      await matcherService.runForItem(item);
-    } catch (err) {
-      console.warn("matcher re-run error:", err);
+    if (relevantFieldsChanged) {
+        console.log(`   - Item ${item._id} updated, re-running matcher.`);
+        const io = req.app.get("io");
+        const onlineUsers = req.app.get("onlineUsers");
+        matcherService.runForItem(item, io, onlineUsers).catch(err => console.error("Matcher service re-run error (non-fatal):", err)); // Run async
     }
 
     res.json(item);
@@ -240,7 +243,7 @@ export const deleteItem = async (req, res) => {
     // remove matches linked to this item
     await Match.deleteMany({ $or: [{ lostItemId: item._id }, { foundItemId: item._id }] });
 
-    await item.remove();
+    await item.deleteOne();
     res.json({ message: "Item deleted" });
   } catch (err) {
     console.error("deleteItem error:", err);
