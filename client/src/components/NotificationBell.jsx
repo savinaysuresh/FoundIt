@@ -21,7 +21,7 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   
   // --- Get the logged-in user's ID ---
-  // This is a placeholder. You MUST replace this with your Auth Context.
+  // This is a placeholder.MUST replace this with your Auth Context.
   // const { user } = useAuth(); 
   // const userId = user?._id;
   

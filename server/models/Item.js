@@ -12,7 +12,7 @@ const itemSchema = new mongoose.Schema({
   imagePublicId: { type: String }, // for Cloudinary deletion
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   isResolved: { type: Boolean, default: false, index: true },
-  matchedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }] // store multiple matches
+  //matchedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }] // store multiple matches
 });
 
 itemSchema.index({ title: "text", description: "text", category: 1, location: 1 });
