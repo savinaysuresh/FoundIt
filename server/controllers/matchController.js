@@ -1,42 +1,34 @@
-/*
-Annotated copy of: c:\FoundIt\server\controllers\matchController.js
+import Match from "../models/Match.js";
+import Item from "../models/Item.js";
+import mongoose from 'mongoose';
+import matcherService from "../services/matcherService.js"; // Needed for rerun
 
-This file contains express-style controller functions. Comments explain Mongoose usage,
-population, authorization checks, and the data shapes sent to the frontend.
-*/
+// --- Constants for Homepage Matches ---
+const HOMEPAGE_MATCH_THRESHOLD = 0.5; // Minimum score to show on homepage
+const HOMEPAGE_MATCH_LIMIT = 8;     // Max number of matches to show
 
-import Match from "../models/Match.js"; // Mongoose model for matches
-import Item from "../models/Item.js"; // Mongoose model for items
-import mongoose from 'mongoose'; // For ObjectId conversions and utilities
-import matcherService from "../services/matcherService.js"; // service to (re)run matching
+// --- Controller Functions ---
 
-// Constants for filtering and limiting homepage matches
-const HOMEPAGE_MATCH_THRESHOLD = 0.5; // float threshold 0-1 for showing on homepage
-const HOMEPAGE_MATCH_LIMIT = 8;     // number of matches to fetch
-
-// Controller: getHomepageMatches
+/**
+ * Get high-scoring, suggested matches relevant to the logged-in user's items
+ * for the homepage.
+ */
 export const getHomepageMatches = async (req, res) => {
     try {
-        // Basic auth guard: req.user should be populated by auth middleware earlier in the chain
+        // Ensure user ID exists before proceeding
         if (!req.user || !req.user.id) {
              return res.status(401).json({ message: "User not authenticated" });
         }
-        // Convert string id to mongoose ObjectId for querying
         const userId = new mongoose.Types.ObjectId(req.user.id);
 
-        // 1. Find user's active (unresolved) items:
-        // - postedBy equals current user
-        // - isResolved false means item still open for matching
-        // Use .select to limit returned fields and .lean() to get plain objects
+        // 1. Find the user's active (unresolved) items
         const userItems = await Item.find({ postedBy: userId, isResolved: false }).select('_id title status').lean();
         if (!userItems.length) {
-            // No active items => no matches possible; return empty array for frontend convenience
-            return res.json([]);
+            return res.json([]); // User has no active items, so no matches to show
         }
         const userItemIds = userItems.map(i => i._id);
 
-        // 2. Query Match documents where either lostItemId or foundItemId matches the user's item IDs,
-        //    and only suggested status with score above threshold.
+        // 2. Find suggested matches involving these items with a high enough score
         const matches = await Match.find({
             $or: [
                 { lostItemId: { $in: userItemIds } },
@@ -45,58 +37,55 @@ export const getHomepageMatches = async (req, res) => {
             status: 'suggested',
             score: { $gte: HOMEPAGE_MATCH_THRESHOLD }
         })
-        // Populate the lostItemId and foundItemId fields with selected item fields.
         .populate({
              path: 'lostItemId',
-             select: 'title imageUrl status postedBy category location dateEvent isResolved'
+             select: 'title imageUrl status postedBy category location dateEvent isResolved' // Added isResolved
         })
         .populate({
              path: 'foundItemId',
-             select: 'title imageUrl status postedBy category location dateEvent isResolved'
+             select: 'title imageUrl status postedBy category location dateEvent isResolved' // Added isResolved
          })
-        .sort({ score: -1 }) // highest score first
+        .sort({ score: -1 }) // Show best matches first
         .limit(HOMEPAGE_MATCH_LIMIT)
-        .lean(); // return plain JS objects (faster, read-only)
+        .lean();
 
-        // 3. Format matches: decide which of the two items is 'mine' vs 'matched item'.
+        // 3. Format the results for the frontend
         const formattedMatches = matches.map(match => {
-            // Determine whether the lost item is one of the user's items.
-            // Use .some with .equals to compare ObjectIds safely (works if they are ObjectId types).
-            const isMyLostItem = userItemIds.some(id => id.equals(match.lostItemId?._id));
+            // Determine which item is "mine" and which is the "match"
+            const isMyLostItem = userItemIds.some(id => id.equals(match.lostItemId?._id)); // Safe access with ?
 
-            // Defensive checks: if population failed for either item, skip the match.
+             // Handle cases where populate might fail (e.g., deleted item)
             if (!match.lostItemId || !match.foundItemId) {
                 console.warn(`Skipping match ${match._id} due to missing item data.`);
                 return null;
             }
 
-            // myItem = the user's own item; matchedItem = the other item in the pair
             const myItem = isMyLostItem ? match.lostItemId : match.foundItemId;
             const matchedItem = isMyLostItem ? match.foundItemId : match.lostItemId;
 
-            // Don't show matches where the *other* item is already resolved
+            // Ensure we don't show matches where the *other* item is resolved
             if (matchedItem.isResolved) {
-                return null;
+                return null; // Skip if the matched item isn't active anymore
             }
-            // Skip matches where both items belong to same user (self-posts)
+             // Ensure we don't show matches if the other item is posted by the same user
+             // (This should ideally be prevented by the matcherService, but double-check here)
             if (String(myItem.postedBy) === String(matchedItem.postedBy)) {
                  return null;
             }
 
-            // Build a shaped object returned to frontend: spread matchedItem fields and attach matchInfo
+            // Return a structured object for the frontend ItemCard
             return {
-                ...matchedItem,
-                _id: matchedItem._id,
-                matchInfo: {
+                ...matchedItem, // Spread the matched item's details (title, image, etc.)
+                _id: matchedItem._id, // Ensure the ID is correct
+                matchInfo: { // Add extra info about the match context
                      matchId: match._id,
                      score: match.score,
                      myPostedItemId: myItem._id,
                      myPostedItemTitle: myItem.title
                 }
             };
-        }).filter(match => match !== null); // Remove nulls from prior checks
+        }).filter(match => match !== null); // Filter out any null results from checks
 
-        // Send resulting array
         res.json(formattedMatches);
 
     } catch (error) {
@@ -105,25 +94,26 @@ export const getHomepageMatches = async (req, res) => {
     }
 };
 
-// Controller: getMyMatches — returns matches where user's items are involved
+
+/**
+ * Get matches related to current user (items they posted) - Used for a dedicated "My Matches" page maybe?
+ */
 export const getMyMatches = async (req, res) => {
   try {
      if (!req.user || !req.user.id) {
          return res.status(401).json({ message: "User not authenticated" });
      }
-    // Find items posted by current user (only need _id)
     const userItems = await Item.find({ postedBy: req.user.id }).select("_id");
     const itemIds = userItems.map(i => i._id);
 
-    // Find Match docs where either side references the user's item IDs
+    // Find matches where either lost or found item belongs to the user
     const matches = await Match.find({
       $or: [{ lostItemId: { $in: itemIds } }, { foundItemId: { $in: itemIds } }]
     })
-      // Populate the relevant item fields so frontend can display item titles/images
-      .populate({ path: 'lostItemId', select: 'title imageUrl status' })
+      .populate({ path: 'lostItemId', select: 'title imageUrl status' }) // Populate needed fields
       .populate({ path: 'foundItemId', select: 'title imageUrl status' })
-      .sort("-createdAt") // newest first
-      .lean();
+      .sort("-createdAt")
+      .lean(); // Use lean
 
     res.json(matches);
   } catch (err) {
@@ -132,17 +122,18 @@ export const getMyMatches = async (req, res) => {
   }
 };
 
-// Controller: getAllMatches — admin-only listing of all matches
+/**
+ * Admin: get all matches
+ */
 export const getAllMatches = async (req, res) => {
   try {
     const matches = await Match.find()
-      // populate both item references and the nested postedBy user fields
-      .populate({ path: 'lostItemId', select: 'title status postedBy' })
+      .populate({ path: 'lostItemId', select: 'title status postedBy' }) // Populate specific fields
       .populate({ path: 'foundItemId', select: 'title status postedBy' })
-      .populate({ path: 'lostItemId.postedBy', select: 'name email' })
+      .populate({ path: 'lostItemId.postedBy', select: 'name email' }) // Populate user details if needed
       .populate({ path: 'foundItemId.postedBy', select: 'name email' })
       .sort("-createdAt")
-      .lean();
+      .lean(); // Use lean
     res.json(matches);
   } catch (err) {
     console.error("getAllMatches error:", err);
@@ -150,30 +141,29 @@ export const getAllMatches = async (req, res) => {
   }
 };
 
-// Controller: rerunMatchForItem — manually re-trigger the matching algorithm for a given item
+/**
+ * Optionally: re-run matcher for an item (admin / owner)
+ */
 export const rerunMatchForItem = async (req, res) => {
   try {
-    // Fetch the item by id param
     const item = await Item.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-     // Authorization: allow only owner or admin to trigger a rerun
+     // Security check: Only owner or admin can rerun
      if (String(item.postedBy) !== String(req.user.id) && req.user.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
      }
 
-     // Access socket.io and onlineUsers map from app locals if the match service uses them
+     // Pass io and onlineUsers if the service needs them for notifications
      const io = req.app.get("io");
      const onlineUsers = req.app.get("onlineUsers");
 
-    // Kick off the service asynchronously and do not await — this avoids blocking the HTTP response.
-    // Errors are caught and logged inside the matcherService or here in the catch of the promise.
+    // Rerun asynchronously
     matcherService.runForItem(item, io, onlineUsers).catch(err => {
         console.error(`Error during manual matcher re-run for item ${item._id}:`, err);
-        // Optionally send admin notification or persist error details elsewhere
+        // Maybe notify admin or log more permanently here
     });
 
-    // Respond to the client immediately indicating work started
     res.json({ message: "Matcher re-run initiated" });
   } catch (err) {
     console.error("rerunMatchForItem error:", err);
