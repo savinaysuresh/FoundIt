@@ -1,26 +1,21 @@
-/*
-Annotated copy of: c:\FoundIt\server\routes\matchRoutes.js
-
-Explains the router setup, middleware usage, and endpoints registered for matches.
-*/
-
 import express from "express";
-import auth from "../middleware/auth.js"; // Authentication middleware (verifies JWT, sets req.user)
-import admin from "../middleware/admin.js"; // Admin-only middleware (checks req.user.role)
+import auth from "../middleware/auth.js";
+import admin from "../middleware/admin.js";
 import { getMyMatches, getAllMatches } from "../controllers/matchController.js";
-import { getHomepageMatches } from '../controllers/matchController.js'; // import homepage-specific controller
+import { getHomepageMatches } from '../controllers/matchController.js'; // Adjust path if needed
 
-const router = express.Router(); // Create a new router instance
+const router = express.Router();
 
-// Public route: GET /api/matches/homepage — requires auth; returns high-priority matches for current user's homepage
+// GET high-priority matches for the logged-in user's homepage
 router.get('/homepage', auth, getHomepageMatches);
 
-// Additional match-related routes could be added here (confirm, reject, etc.)
+// Add other match-related routes here later if needed
+// e.g., router.put('/:matchId/confirm', auth, confirmMatch);
 
-// Get matches related to current user (requires auth)
+// Get matches for current user
 router.get("/my", auth, getMyMatches);
 
-// Admin route: GET /api/matches/ — requires auth + admin to list all matches
+// Admin: get all matches
 router.get("/", auth, admin, getAllMatches);
 
-export default router; // Export router to be mounted in server.js (e.g., app.use('/api/matches', matchRoutes))
+export default router;
