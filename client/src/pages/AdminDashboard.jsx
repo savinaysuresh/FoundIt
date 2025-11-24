@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import { useAuth } from "../context/AuthContext";
 import { getAdminStats } from "../utils/api";
+import AdminClaims from "./AdminClaims";
+
 
 const StatCard = ({ title, value, bgColor }) => (
   <div className={`${bgColor} p-6 rounded-lg shadow-md text-center`}>
@@ -18,6 +20,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { auth } = useAuth();
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,24 +99,16 @@ const AdminDashboard = () => {
 
         {/* --- Management Navigation --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <Link
-            to="/admin/users"
-            className="block bg-blue-600 text-white p-8 rounded-lg shadow-lg hover:bg-blue-700 text-center text-2xl font-semibold transition-transform hover:scale-105"
-          >
-            👥 Manage Users
-          </Link>
-          <Link
-            to="/admin/items"
-            className="block bg-green-600 text-white p-8 rounded-lg shadow-lg hover:bg-green-700 text-center text-2xl font-semibold transition-transform hover:scale-105"
-          >
-            📦 Manage Items
-          </Link>
-          <Link
+          <AdminClaims></AdminClaims>
+          
+          {/* <Link
             to="/admin/claims"
             className="block bg-yellow-600 text-white p-8 rounded-lg shadow-lg hover:bg-yellow-700 text-center text-2xl font-semibold transition-transform hover:scale-105"
           >
             📝 Manage Claims
-          </Link>
+           </Link> */}
+        
+         
         </div>
 
         {/* --- Recent Activity Section --- */}

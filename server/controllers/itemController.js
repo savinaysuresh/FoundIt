@@ -26,47 +26,78 @@ const uploadImage = async (req) => {
  * Expects fields: title, description, category, location, status (lost/found), dateEvent (optional)
  * Accepts image via multer (req.file) OR req.body.imageBase64
  */
+// server/controllers/itemController.js
+// server/controllers/itemController.js
+// Helper: normalize string (trim + lowercase)
+const normalize = (str) => str.trim().toLowerCase();
+
+// Normalize date to UTC midnight
+const normalizeDate = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+};
+
 export const createItem = async (req, res) => {
   try {
     const { title, description, category, location, status, dateEvent } = req.body;
+
+    // Validate required fields
     if (!title || !category || !location || !status) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    let uploadResult = null;
-    try {
-      uploadResult = await uploadImage(req);
-    } catch (err) {
-      console.warn("Image upload failed:", err);
-    }
+    // Normalize input
+    // const titleNorm = normalize(title);
+    // const locationNorm = normalize(location);
+    // const dateNorm = normalizeDate(dateEvent);
 
+    // // ---------------- DUPLICATE CHECK ----------------
+    // const duplicate = await Item.findOne({
+    //   title: { $regex: `^${titleNorm}$`, $options: "i" },
+    //   category,
+    //   location: { $regex: `^${locationNorm}$`, $options: "i" },
+    //   status,
+    //   dateEvent: dateNorm,
+    // });
+
+    // if (duplicate) {
+    //   return res.status(409).json({ message: "Duplicate item exists. Not creating a new item." });
+    // }
+    // // --------------------------------------------------
+
+    // Upload image if exists
+    let uploadResult = null;
+    try { uploadResult = await uploadImage(req); } catch (err) { console.warn(err); }
+
+    // Create item
     const item = await Item.create({
       title,
       description,
       category,
       location,
       status,
-      dateEvent: dateEvent ? new Date(dateEvent) : undefined,
-      imageUrl: uploadResult ? uploadResult.secure_url : undefined,
-      imagePublicId: uploadResult ? uploadResult.public_id : undefined,
-      postedBy: req.user.id
+      dateEvent: dateNorm,
+      imageUrl: uploadResult?.secure_url,
+      imagePublicId: uploadResult?.public_id,
+      postedBy: req.user.id,
     });
 
+    // Run matcherService async
     const io = req.app.get("io");
     const onlineUsers = req.app.get("onlineUsers");
-    matcherService.runForItem(item, io, onlineUsers).catch(err => console.error("Matcher service error (non-fatal):", err)); // Run async
+    matcherService.runForItem(item, io, onlineUsers).catch(err => console.error(err));
 
     res.status(201).json(item);
+
   } catch (err) {
     console.error("createItem error:", err);
     res.status(500).json({ message: "Server error" });
   } finally {
-    // if multer left a temp file, try to remove it
-    if (req.file && req.file.path) {
-      fs.unlink(req.file.path, () => {});
-    }
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
   }
 };
+
 
 /**
  * Query items with filters & pagination
@@ -348,4 +379,3 @@ export const searchItems = async (req, res) => {
 export const rerunMatchForItem = async (req, res) => {
   return res.status(501).json({ message: "rerunMatchForItem not implemented yet" });
 };
-
