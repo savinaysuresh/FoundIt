@@ -31,6 +31,7 @@ export const createClaim = async (req, res) => {
       claimantId: req.user.id,
       message
     });
+    console.log("claimed");
 
     // create notification for item owner
     const notif = await Notification.create({
@@ -120,7 +121,6 @@ export const updateClaimStatus = async (req, res) => {
     const item = await Item.findById(claim.itemId);
     if (!item) return res.status(404).json({ message: "Related item not found" });
 
-    // --- 1. NEW SECURITY CHECK ---
     // Allow if user is the item owner OR an admin
     if (String(item.postedBy) !== String(userId) && userRole !== 'admin') {
       return res.status(403).json({ message: "Not authorized to update this claim" });
@@ -134,7 +134,6 @@ export const updateClaimStatus = async (req, res) => {
 
     // --- 3. "ACCEPT" (VERIFIED) LOGIC ---
     if (status === "verified") {
-      // A) Resolve the item
       item.isResolved = true;
       await item.save();
       notificationMessage = `Your claim for "${item.title}" has been accepted!`;
@@ -149,16 +148,12 @@ export const updateClaimStatus = async (req, res) => {
         { $set: { status: "rejected" } }
       );
       
-      // (Optional) We could loop and send notifications to all rejected claimants
-      // but for now, we only notify the one whose claim was actioned.
 
     } 
-    // --- 4. "DECLINE" (REJECTED) LOGIC ---
     else {
       notificationMessage = `Your claim for "${item.title}" has been declined.`;
     }
 
-    // --- 5. NOTIFICATION LOGIC ---
     // Notify the claimant that their status changed
     const claimantNotif = await Notification.create({
       userId: claim.claimantId,
@@ -229,7 +224,6 @@ export const deleteMyClaim = async (req, res) => {
       return res.status(404).json({ message: "Claim not found" });
     }
 
-    // Security Check: Make sure the user deleting is the one who made the claim
     if (String(claim.claimantId) !== String(userId)) {
       return res.status(403).json({ message: "Not authorized to delete this claim" });
     }
@@ -239,10 +233,7 @@ export const deleteMyClaim = async (req, res) => {
       return res.status(400).json({ message: "Cannot delete a claim that has already been actioned." });
     }
 
-    await claim.deleteOne(); // Use deleteOne() or remove() depending on Mongoose version
-
-    // Optional: Notify the item owner that the claim was cancelled?
-    // You could add notification logic here if desired.
+    await claim.deleteOne(); 
 
     res.json({ message: "Claim cancelled successfully" });
 
@@ -251,4 +242,3 @@ export const deleteMyClaim = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-// --- END OF NEW FUNCTION ---

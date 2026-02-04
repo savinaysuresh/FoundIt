@@ -104,14 +104,17 @@ export const getClaimsForItem = async (itemId) => {
     throw error.response.data;
   }
 };
+
 export const updateClaimStatus = async (claimId, status) => {
   try {
     const { data } = await API.put(`/claims/${claimId}/status`, { status });
     return data;
   } catch (error) {
-    throw error.response.data;
+    throw error.response?.data || { message: "Unknown error" };
   }
 };
+
+
 export const deleteMyClaim = async (claimId) => {
   try {
     const { data } = await API.delete(`/claims/${claimId}`);
@@ -124,6 +127,9 @@ export const deleteMyClaim = async (claimId) => {
  * Fetches the claims made BY the current user.
  */
 export const getMyClaims = () => API.get('/claims/my');
+
+export const getAllClaims = () => API.get('/claims/');
+
 
 // --- NOTIFICATION FUNCTIONS ---
 export const getMyNotifications = async () => {
