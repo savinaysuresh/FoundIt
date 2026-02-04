@@ -66,7 +66,7 @@ const runForItem = async (item, io, onlineUsers) => {
     isResolved: false,
     _id: { $ne: item._id },
     postedBy: { $ne: item.postedBy },
-    $text: { $search: `${item.title} ${item.description || ''}` }
+    $text: { $search: `${item.title || ' '} ${item.description || ''}` }
   };
 
   // 2. Projection to get textScore
